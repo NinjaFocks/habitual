@@ -23,6 +23,7 @@ export type Habit = {
   targetValue?: number; // for count/timer types
   unit?: string; // e.g. "glasses", "minutes"
   completions: HabitCompletion[];
+  activeDays: number[]; // 0=Sun, 1=Mon, ..., 6=Sat — empty array means every day
   reminderEnabled: boolean;
   reminderTime?: string; // HH:MM
   reminderDays: number[]; // 0=Sun, 1=Mon, ..., 6=Sat

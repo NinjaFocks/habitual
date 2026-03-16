@@ -16,7 +16,6 @@ import {
   getTotalCompletions,
   isCompletedOnDate,
   today,
-  getGridDates,
 } from "../utils/habits";
 
 export default function StatsScreen() {
@@ -46,9 +45,11 @@ export default function StatsScreen() {
       : 0;
 
   // Most consistent habit
-  const mostConsistent = [...activeHabits].sort(
-    (a, b) => getCompletionRate(b, 30) - getCompletionRate(a, 30)
-  )[0];
+  const mostConsistent = activeHabits.length > 0
+    ? [...activeHabits].sort(
+        (a, b) => getCompletionRate(b, 30) - getCompletionRate(a, 30)
+      )[0]
+    : null;
 
   // Per category completion rate
   const categoryStats = categories
@@ -65,6 +66,18 @@ export default function StatsScreen() {
       return { category: cat, rate, count: catHabits.length };
     })
     .filter(Boolean);
+
+    const allTimeLongestStreak = activeHabits.length > 0
+    ? Math.max(...activeHabits.map((h) => getLongestStreak(h)))
+    : 0;
+
+    const allTimeTotalCompletions = activeHabits.reduce(
+      (sum, h) => sum + getTotalCompletions(h), 0
+    );
+
+    const habitWithLongestStreak = activeHabits.length > 0
+      ? [...activeHabits].sort((a, b) => getLongestStreak(b) - getLongestStreak(a))[0]
+      : null;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -112,6 +125,24 @@ export default function StatsScreen() {
                 </Text>
               </View>
             </View>
+
+            {/* Most Consistent */}
+            {mostConsistent && (
+              <>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>⭐ Most Consistent</Text>
+                <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, marginBottom: 24 }]}>
+                  <View style={styles.streakRow}>
+                    <View style={[styles.streakIcon, { backgroundColor: mostConsistent.color + "22" }]}>
+                      <Ionicons name={mostConsistent.icon as any} size={16} color={mostConsistent.color} />
+                    </View>
+                    <Text style={[styles.streakName, { color: theme.text }]}>{mostConsistent.name}</Text>
+                    <Text style={[styles.streakDays, { color: mostConsistent.color }]}>
+                      {getCompletionRate(mostConsistent, 30)}%
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
 
             {/* Top Streaks */}
             {topStreaks.length > 0 && (
@@ -227,6 +258,30 @@ export default function StatsScreen() {
             )}
           </>
         )}
+
+        {/* All time */}
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>🏆 All time</Text>
+            <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, marginBottom: 24 }]}>
+              <View style={styles.streakRow}>
+                <Ionicons name="checkmark-circle-outline" size={18} color="#6C63FF" />
+                <Text style={[styles.streakName, { color: theme.text }]}>Total completions</Text>
+                <Text style={[styles.streakDays, { color: "#6C63FF" }]}>{allTimeTotalCompletions}</Text>
+              </View>
+              {habitWithLongestStreak && (
+                <View style={[styles.streakRow, { borderTopWidth: 1, borderTopColor: theme.border }]}>
+                  <Ionicons name="trophy-outline" size={18} color={habitWithLongestStreak.color} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.streakName, { color: theme.text }]}>Longest ever streak</Text>
+                    <Text style={[styles.streakDays, { color: habitWithLongestStreak.color, fontSize: 12 }]}>
+                      {habitWithLongestStreak.name}
+                    </Text>
+                  </View>
+                  <Text style={[styles.streakDays, { color: habitWithLongestStreak.color }]}>
+                    {allTimeLongestStreak}d
+                  </Text>
+                </View>
+              )}
+            </View>
 
         <View style={{ height: 40 }} />
       </ScrollView>

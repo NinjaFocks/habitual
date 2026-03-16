@@ -8,7 +8,6 @@ import {
   ScrollView,
   TextInput,
   Switch,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useStore } from "../store";
@@ -34,6 +33,11 @@ export const AddHabitModal: React.FC<Props> = ({
   const theme = useTheme();
   const { addHabit, updateHabit, habits, categories, settings } = useStore();
 
+  const orderedDays = Array.from({ length: 7 }, (_, i) => {
+    const dayIndex = (settings.weekStartsOn + i) % 7;
+    return { label: DAYS[dayIndex], index: dayIndex };
+  });
+
   const editHabit = editHabitId ? habits.find((h) => h.id === editHabitId) : null;
 
   const [name, setName] = useState(editHabit?.name ?? "");
@@ -55,15 +59,20 @@ export const AddHabitModal: React.FC<Props> = ({
   const [reminderDays, setReminderDays] = useState<number[]>(
     editHabit?.reminderDays ?? [1, 2, 3, 4, 5]
   );
+  const [saving, setSaving] = useState(false);
+  const [activeDays, setActiveDays] = useState<number[]>(
+    editHabit?.activeDays ?? []
+  );
 
-  const toggleDay = (day: number) => {
-    setReminderDays((prev) =>
+  const toggleActiveDay = (day: number) => {
+    setActiveDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     );
   };
 
   const handleSave = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || saving) return;
+    setSaving(true);
 
     const habitData = {
       name: name.trim(),
@@ -78,6 +87,7 @@ export const AddHabitModal: React.FC<Props> = ({
       reminderTime: reminderEnabled ? reminderTime : undefined,
       reminderDays,
       archived: false,
+      activeDays,
     };
 
     if (editHabitId) {
@@ -97,6 +107,7 @@ export const AddHabitModal: React.FC<Props> = ({
       await scheduleHabitReminder(tempHabit);
     }
 
+    setSaving(false);
     onClose();
     resetForm();
   };
@@ -113,6 +124,7 @@ export const AddHabitModal: React.FC<Props> = ({
     setReminderEnabled(false);
     setReminderTime(settings.defaultReminderTime);
     setReminderDays([1, 2, 3, 4, 5]);
+    setActiveDays([]);
   };
 
   return (
@@ -131,9 +143,9 @@ export const AddHabitModal: React.FC<Props> = ({
           <Text style={[styles.modalTitle, { color: theme.text }]}>
             {editHabitId ? "Edit Habit" : "New Habit"}
           </Text>
-          <Pressable onPress={handleSave}>
-            <Text style={[styles.saveText, { color: "#6C63FF", opacity: name.trim() ? 1 : 0.4 }]}>
-              Save
+          <Pressable onPress={handleSave} disabled={saving}>
+            <Text style={[styles.saveText, { color: "#6C63FF", opacity: name.trim() && !saving ? 1 : 0.4 }]}>
+              {saving ? "Saving..." : "Save"}
             </Text>
           </Pressable>
         </View>
@@ -163,7 +175,7 @@ export const AddHabitModal: React.FC<Props> = ({
           {/* Type */}
           <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>TYPE</Text>
           <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            {(["boolean", "count", "timer"] as HabitType[]).map((t, i) => (
+            {(["boolean", "count"] as HabitType[]).map((t, i) => (
               <Pressable
                 key={t}
                 onPress={() => setType(t)}
@@ -202,6 +214,55 @@ export const AddHabitModal: React.FC<Props> = ({
                 )}
               </Pressable>
             ))}
+          </View>
+
+          {/* Active days */}
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>ACTIVE DAYS</Text>
+          <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.activeDaysRow}>
+              <Text style={[styles.activeDaysHint, { color: theme.textSecondary }]}>
+                {activeDays.length === 0 ? "Every day" : "Selected days only"}
+              </Text>
+            </View>
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            <View style={styles.reminderDays}>
+              {orderedDays.map(({ label, index }) => (
+                <Pressable
+                  key={index}
+                  onPress={() => toggleActiveDay(index)}
+                  style={[
+                    styles.dayDot,
+                    {
+                      backgroundColor: activeDays.includes(index)
+                        ? "#6C63FF"
+                        : theme.surfaceSecondary,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.dayText,
+                      {
+                        color: activeDays.includes(index)
+                          ? "#FFF"
+                          : theme.textSecondary,
+                      },
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            <Pressable
+              onPress={() => setActiveDays([])}
+              style={styles.clearDaysButton}
+            >
+              <Text style={{ color: "#6C63FF", fontSize: 13, fontWeight: "600" }}>
+                Reset
+              </Text>
+            </Pressable>
           </View>
 
           {/* Target (for count/timer) */}
@@ -313,7 +374,7 @@ export const AddHabitModal: React.FC<Props> = ({
                 ))}
               </View>
             </>
-          )}
+          )}          
 
           {/* Reminder */}
           <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>REMINDER</Text>
@@ -330,34 +391,34 @@ export const AddHabitModal: React.FC<Props> = ({
               <>
                 <View style={[styles.divider, { backgroundColor: theme.border }]} />
                 <View style={styles.reminderDays}>
-                  {DAYS.map((day, index) => (
-                    <Pressable
-                      key={index}
-                      onPress={() => toggleDay(index)}
-                      style={[
-                        styles.dayDot,
-                        {
-                          backgroundColor: reminderDays.includes(index)
-                            ? "#6C63FF"
-                            : theme.surfaceSecondary,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.dayText,
-                          {
-                            color: reminderDays.includes(index)
-                              ? "#FFF"
-                              : theme.textSecondary,
-                          },
-                        ]}
-                      >
-                        {day}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+              {orderedDays.map(({ label, index }) => (
+                <Pressable
+                  key={index}
+                  onPress={() => toggleActiveDay(index)}
+                  style={[
+                    styles.dayDot,
+                    {
+                      backgroundColor: activeDays.includes(index)
+                        ? "#6C63FF"
+                        : theme.surfaceSecondary,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.dayText,
+                      {
+                        color: activeDays.includes(index)
+                          ? "#FFF"
+                          : theme.textSecondary,
+                      },
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
                 <View style={[styles.divider, { backgroundColor: theme.border }]} />
                 <View style={styles.timeRow}>
                   <Text style={[styles.reminderLabel, { color: theme.text }]}>Time</Text>
@@ -517,5 +578,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     minWidth: 70,
     textAlign: "center",
+  },
+  activeDaysRow: {
+    padding: 14,
+  },
+  activeDaysHint: {
+    fontSize: 13,
+  },
+  clearDaysButton: {
+    padding: 14,
+    alignItems: "center",
   },
 });

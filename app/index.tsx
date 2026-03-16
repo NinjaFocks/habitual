@@ -42,8 +42,11 @@ export default function TodayScreen() {
 
   const isToday = selectedDate === todayStr;
 
+  const selectedDayOfWeek = parseISO(selectedDate).getDay();
+
   const activeHabits = habits
     .filter((h) => !h.archived)
+    .filter((h) => !h.activeDays || h.activeDays.length === 0 || h.activeDays.includes(selectedDayOfWeek))
     .sort((a, b) => a.order - b.order);
 
   const filteredHabits = selectedCategory
@@ -71,12 +74,12 @@ export default function TodayScreen() {
 
   useEffect(() => {
     Animated.spring(progressAnim, {
-      toValue: completionPercent,
+      toValue: activeHabits.length > 0 ? completionPercent : 0,
       useNativeDriver: false,
       friction: 8,
       tension: 40,
     }).start();
-  }, [completionPercent]);
+  }, [completionPercent, activeHabits.length]);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -382,8 +385,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   navButton: {
-    width: 34,
     height: 34,
+    minWidth: 34,
+    paddingHorizontal: 10,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
