@@ -18,13 +18,15 @@ type Props = {
   habit: Habit;
   onPress: () => void;
   onLongPress?: () => void;
+  selectedDate?: string;
 };
 
-export const HabitCard: React.FC<Props> = ({ habit, onPress, onLongPress }) => {
+export const HabitCard: React.FC<Props> = ({ habit, onPress, onLongPress, selectedDate }) => {
   const theme = useTheme();
   const { toggleCompletion } = useStore();
   const todayStr = today();
-  const isCompleted = isCompletedOnDate(habit, todayStr);
+  const activeDate = selectedDate ?? todayStr;
+  const isCompleted = isCompletedOnDate(habit, activeDate);
   const streak = getCurrentStreak(habit);
 
   const handleToggle = async () => {
@@ -35,10 +37,10 @@ export const HabitCard: React.FC<Props> = ({ habit, onPress, onLongPress }) => {
           : Haptics.ImpactFeedbackStyle.Medium
       );
     }
-    toggleCompletion(habit.id, todayStr, habit.type === "boolean" ? 1 : undefined);
+    toggleCompletion(habit.id, activeDate , habit.type === "boolean" ? 1 : undefined);
   };
 
-  const todayCompletion = habit.completions.find((c) => c.date === todayStr);
+  const todayCompletion = habit.completions.find((c) => c.date === activeDate);
 
   const handleCountChange = async (delta: number) => {
     if (Platform.OS !== "web") {
@@ -46,7 +48,7 @@ export const HabitCard: React.FC<Props> = ({ habit, onPress, onLongPress }) => {
     }
     const current = todayCompletion?.value ?? 0;
     const newVal = Math.max(0, current + delta);
-    toggleCompletion(habit.id, todayStr, newVal);
+    toggleCompletion(habit.id, activeDate, newVal);
   };
 
   return (

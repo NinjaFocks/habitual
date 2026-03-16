@@ -18,7 +18,7 @@ import { GRID_WEEK_OPTIONS, CATEGORY_COLORS, HABIT_ICONS } from "../constants";
 
 export default function SettingsScreen() {
   const theme = useTheme();
-  const { settings, updateSettings, categories, addCategory, deleteCategory } = useStore();
+  const { settings, updateSettings, categories, addCategory, deleteCategory, habits, archiveHabit } = useStore();
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [newCatColor, setNewCatColor] = useState(CATEGORY_COLORS[0]);
@@ -161,6 +161,34 @@ export default function SettingsScreen() {
                   }
                 >
                   <Ionicons name="trash-outline" size={16} color={theme.textTertiary} />
+                </Pressable>
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* Archived habits */}
+        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>ARCHIVED HABITS</Text>
+        <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          {habits.filter((h) => h.archived).length === 0 ? (
+            <View style={styles.row}>
+              <Text style={[styles.rowSubtext, { color: theme.textSecondary }]}>No archived habits</Text>
+            </View>
+          ) : (
+            habits.filter((h) => h.archived).map((habit, i) => (
+              <View
+                key={habit.id}
+                style={[
+                  styles.row,
+                  i > 0 && { borderTopWidth: 1, borderTopColor: theme.border },
+                ]}
+              >
+                <View style={styles.catLeft}>
+                  <View style={[styles.catDot, { backgroundColor: habit.color }]} />
+                  <Text style={[styles.rowText, { color: theme.text }]}>{habit.name}</Text>
+                </View>
+                <Pressable onPress={() => archiveHabit(habit.id)}>
+                  <Text style={{ color: "#6C63FF", fontSize: 13, fontWeight: "600" }}>Restore</Text>
                 </Pressable>
               </View>
             ))

@@ -7,6 +7,7 @@ import {
   Pressable,
   Alert,
   Platform,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -51,6 +52,9 @@ export default function HabitDetailScreen() {
   const completionRate = getCompletionRate(habit, 30);
   const totalCompletions = getTotalCompletions(habit);
   const todayCompletion = habit.completions.find((c) => c.date === todayStr);
+  const initialSeconds = todayCompletion?.value ?? 0;
+  const [timerMinutes, setTimerMinutes] = useState(Math.floor(initialSeconds / 60).toString());
+  const [timerSeconds, setTimerSeconds] = useState((initialSeconds % 60).toString());
 
   const handleToggle = async () => {
     if (Platform.OS !== "web") {
@@ -156,9 +160,49 @@ export default function HabitDetailScreen() {
             </Pressable>
           ) : (
             <View style={[styles.counterCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <Text style={[styles.counterLabel, { color: theme.textSecondary }]}>
-                Today — {habit.unit ? `Target: ${habit.targetValue} ${habit.unit}` : `Target: ${habit.targetValue}`}
-              </Text>
+            <Text style={[styles.counterLabel, { color: theme.textSecondary }]}>
+              Today — {habit.targetValue ? `Target: ${habit.targetValue}${habit.unit ? ` ${habit.unit}` : ""}` : "No target set"}
+            </Text>
+            {habit.type === "timer" ? (
+              <View style={styles.timerRow}>
+                <View style={styles.timerInputGroup}>
+                  <TextInput
+                    value={timerMinutes}
+                    onChangeText={(v) => {
+                      setTimerMinutes(v.replace(/[^0-9]/g, ""));
+                    }}
+                    onBlur={() => {
+                      const mins = parseInt(timerMinutes || "0");
+                      const secs = parseInt(timerSeconds || "0");
+                      toggleCompletion(habit.id, todayStr, mins * 60 + secs);
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={3}
+                    style={[styles.timerInput, { color: habit.color, borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
+                  />
+                  <Text style={[styles.timerLabel, { color: theme.textSecondary }]}>min</Text>
+                </View>
+                <Text style={[styles.timerColon, { color: theme.textSecondary }]}>:</Text>
+                <View style={styles.timerInputGroup}>
+                  <TextInput
+                    value={timerSeconds}
+                    onChangeText={(v) => {
+                      const n = Math.min(59, parseInt(v.replace(/[^0-9]/g, "") || "0"));
+                      setTimerSeconds(n.toString());
+                    }}
+                    onBlur={() => {
+                      const mins = parseInt(timerMinutes || "0");
+                      const secs = parseInt(timerSeconds || "0");
+                      toggleCompletion(habit.id, todayStr, mins * 60 + secs);
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    style={[styles.timerInput, { color: habit.color, borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
+                  />
+                  <Text style={[styles.timerLabel, { color: theme.textSecondary }]}>sec</Text>
+                </View>
+              </View>
+            ) : (
               <View style={styles.counterRow}>
                 <Pressable
                   onPress={() => handleCountChange(-1)}
@@ -177,23 +221,24 @@ export default function HabitDetailScreen() {
                   <Ionicons name="add" size={24} color="#FFF" />
                 </Pressable>
               </View>
-              {habit.targetValue && (
-                <View style={[styles.counterProgress, { backgroundColor: theme.inactive }]}>
-                  <View
-                    style={[
-                      styles.counterProgressFill,
-                      {
-                        backgroundColor: habit.color,
-                        width: `${Math.min(
-                          ((todayCompletion?.value ?? 0) / habit.targetValue) * 100,
-                          100
-                        )}%`,
-                      },
-                    ]}
-                  />
-                </View>
-              )}
-            </View>
+            )}
+            {habit.targetValue && (
+              <View style={[styles.counterProgress, { backgroundColor: theme.inactive }]}>
+                <View
+                  style={[
+                    styles.counterProgressFill,
+                    {
+                      backgroundColor: habit.color,
+                      width: `${Math.min(
+                        ((todayCompletion?.value ?? 0) / habit.targetValue) * 100,
+                        100
+                      )}%`,
+                    },
+                  ]}
+                />
+              </View>
+            )}
+          </View>
           )}
         </View>
 
@@ -378,4 +423,32 @@ const styles = StyleSheet.create({
   activityDot: { width: 8, height: 8, borderRadius: 4 },
   activityDate: { flex: 1, fontSize: 14 },
   activityValue: { fontSize: 14, fontWeight: "600" },
+  timerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  timerInputGroup: {
+    alignItems: "center",
+    gap: 4,
+  },
+  timerInput: {
+    width: 80,
+    height: 64,
+    borderRadius: 14,
+    borderWidth: 1,
+    fontSize: 28,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  timerLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  timerColon: {
+    fontSize: 28,
+    fontWeight: "700",
+    marginBottom: 20,
+  },
 });

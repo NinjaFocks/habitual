@@ -16,6 +16,7 @@ import { useTheme } from "../hooks/useTheme";
 import { HABIT_COLORS, HABIT_ICONS } from "../constants";
 import { HabitType } from "../types";
 import { scheduleHabitReminder } from "../utils/notifications";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type Props = {
   visible: boolean;
@@ -121,7 +122,7 @@ export const AddHabitModal: React.FC<Props> = ({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         {/* Modal Header */}
         <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
           <Pressable onPress={() => { onClose(); resetForm(); }}>
@@ -376,7 +377,7 @@ export const AddHabitModal: React.FC<Props> = ({
 
           <View style={{ height: 40 }} />
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 };

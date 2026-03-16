@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,24 +7,41 @@ import {
   Pressable,
   Modal,
   StatusBar,
+  Alert,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { format } from "date-fns";
 import { useStore } from "../store";
 import { useTheme } from "../hooks/useTheme";
 import { HabitCard } from "../components/HabitCard";
-import { isCompletedOnDate, today } from "../utils/habits";
+import { isCompletedOnDate, today, formatDate } from "../utils/habits";
 import { AddHabitModal } from "../components/AddHabitModal";
+import { format, subDays, addDays, parseISO } from "date-fns";
 
 export default function TodayScreen() {
   const theme = useTheme();
-  const { habits, categories } = useStore();
+  const { habits, categories, archiveHabit, deleteHabit, toggleCompletion } = useStore();
   const [showAdd, setShowAdd] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(today());
+
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
   const todayStr = today();
+
+  const goToPrevDay = () => {
+    setSelectedDate(formatDate(subDays(parseISO(selectedDate), 1)));
+  };
+
+  const goToNextDay = () => {
+    const next = formatDate(addDays(parseISO(selectedDate), 1));
+    if (next <= todayStr) setSelectedDate(next);
+  };  
+
+  const isToday = selectedDate === todayStr;
+
   const activeHabits = habits
     .filter((h) => !h.archived)
     .sort((a, b) => a.order - b.order);
@@ -34,13 +51,32 @@ export default function TodayScreen() {
     : activeHabits;
 
   const completedCount = activeHabits.filter((h) =>
-    isCompletedOnDate(h, todayStr)
+    isCompletedOnDate(h, selectedDate)
   ).length;
 
   const completionPercent =
     activeHabits.length > 0
       ? Math.round((completedCount / activeHabits.length) * 100)
       : 0;
+
+  const handleMarkAllDone = () => {
+    activeHabits
+      .filter((h) => !isCompletedOnDate(h, selectedDate) && h.type === "boolean")
+      .forEach((h) => toggleCompletion(h.id, selectedDate, 1));
+  };
+
+  const allBooleanDone = activeHabits
+    .filter((h) => h.type === "boolean")
+    .every((h) => isCompletedOnDate(h, selectedDate));
+
+  useEffect(() => {
+    Animated.spring(progressAnim, {
+      toValue: completionPercent,
+      useNativeDriver: false,
+      friction: 8,
+      tension: 40,
+    }).start();
+  }, [completionPercent]);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -57,16 +93,57 @@ export default function TodayScreen() {
         <View style={styles.header}>
           <View>
             <Text style={[styles.dateText, { color: theme.textSecondary }]}>
-              {format(new Date(), "EEEE, MMMM d")}
+              {format(parseISO(selectedDate), "EEEE, MMMM d")}
             </Text>
-            <Text style={[styles.title, { color: theme.text }]}>Today</Text>
+            <Text style={[styles.title, { color: theme.text }]}>
+              {isToday ? "Today" : format(parseISO(selectedDate), "MMM d")}
+            </Text>
           </View>
-          <Pressable
-            onPress={() => setShowAdd(true)}
-            style={[styles.addButton, { backgroundColor: "#6C63FF" }]}
-          >
-            <Ionicons name="add" size={22} color="#FFF" />
-          </Pressable>
+          <View style={styles.headerRight}>
+            {!isToday && (
+              <Pressable
+                onPress={() => setSelectedDate(today())}
+                style={[styles.navButton, { backgroundColor: theme.surfaceSecondary }]}
+              >
+                <Text style={[styles.todayButtonText, { color: theme.text }]}>Today</Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={goToPrevDay}
+              style={[styles.navButton, { backgroundColor: theme.surfaceSecondary }]}
+            >
+              <Ionicons name="chevron-back" size={18} color={theme.text} />
+            </Pressable>
+            <Pressable
+              onPress={goToNextDay}
+              style={[styles.navButton, {
+                backgroundColor: theme.surfaceSecondary,
+                opacity: isToday ? 0.3 : 1,
+              }]}
+              disabled={isToday}
+            >
+              <Ionicons name="chevron-forward" size={18} color={theme.text} />
+            </Pressable>
+            <Pressable
+              onPress={() => setShowAdd(true)}
+              style={[styles.addButton, { backgroundColor: "#6C63FF" }]}
+            >
+              <Ionicons name="add" size={22} color="#FFF" />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Mark all done row — always rendered to prevent layout jump */}
+        <View style={styles.markAllRow}>
+          {activeHabits.some((h) => h.type === "boolean") && !allBooleanDone ? (
+            <Pressable
+              onPress={handleMarkAllDone}
+              style={[styles.markAllButton, { borderColor: "#6C63FF" }]}
+            >
+              <Ionicons name="checkmark-done-outline" size={15} color="#6C63FF" />
+              <Text style={[styles.markAllText, { color: "#6C63FF" }]}>Mark all done</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {/* Progress Bar */}
@@ -81,11 +158,14 @@ export default function TodayScreen() {
               </Text>
             </View>
             <View style={[styles.progressTrack, { backgroundColor: theme.inactive }]}>
-              <View
+              <Animated.View
                 style={[
                   styles.progressFill,
                   {
-                    width: `${completionPercent}%`,
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ["0%", "100%"],
+                    }),
                     backgroundColor: "#6C63FF",
                   },
                 ]}
@@ -201,8 +281,31 @@ export default function TodayScreen() {
             <HabitCard
               key={habit.id}
               habit={habit}
+              selectedDate={selectedDate}
               onPress={() =>
                 router.push({ pathname: "/habit/[id]", params: { id: habit.id } })
+              }
+              onLongPress={() =>
+                Alert.alert(habit.name, undefined, [
+                  {
+                    text: "Edit",
+                    onPress: () => router.push({ pathname: "/habit/[id]", params: { id: habit.id } }),
+                  },
+                  {
+                    text: habit.archived ? "Unarchive" : "Archive",
+                    onPress: () => archiveHabit(habit.id),
+                  },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () =>
+                      Alert.alert("Delete Habit", "Are you sure? This cannot be undone.", [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "Delete", style: "destructive", onPress: () => deleteHabit(habit.id) },
+                      ]),
+                  },
+                  { text: "Cancel", style: "cancel" },
+                ])
               }
             />
           ))}
@@ -273,4 +376,47 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   emptyButtonText: { color: "#FFF", fontWeight: "600", fontSize: 15 },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  navButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  todayButton: {
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  todayButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  markAllRow: {
+    height: 36,
+    justifyContent: "center",
+    alignItems: "flex-end",
+    marginTop: -30,
+    marginBottom: 8,
+  },
+  markAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  markAllText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
 });
