@@ -8,7 +8,7 @@ A free, open-source habit tracker with a beautiful contribution-style grid. No a
 - **Visual history grid**: Configurable 1, 3, 6, or 12 month grid of coloured squares
 - **Streaks & Stats**: Current streak, longest streak, 30-day completion rate
 - **Categories**: Group habits by category with custom colours
-- **Reminders**: Per-habit notifications with custom days and time
+- **Reminders**: Per-habit notifications with custom days and time, plus an optional daily check-in
 - **Dark/Light/System theme**: Follows your device or set manually
 - **Tap to complete**: Toggle directly on the grid or from the detail screen
 - **No account required**: All data stored locally on your device

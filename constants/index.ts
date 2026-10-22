@@ -63,6 +63,8 @@ export const DEFAULT_SETTINGS = {
   theme: "system" as const,
   weekStartsOn: 1 as const,
   defaultReminderTime: "09:00",
+  dailyReminderEnabled: false,
+  dailyReminderTime: "20:00",
 };
 
 export const GRID_WEEK_OPTIONS = [

@@ -1,6 +1,6 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { Habit } from "../types";
+import { AppSettings, Habit } from "../types";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -101,4 +101,31 @@ export const rescheduleAllReminders = async (habits: Habit[]): Promise<void> => 
   for (const habit of habits) {
     await syncHabitReminder(habit);
   }
+};
+
+// One reminder a day, separate from the per-habit ones
+const DAILY_REMINDER_ID = "daily-reminder";
+
+export const syncDailyReminder = async (settings: AppSettings): Promise<void> => {
+  // Replace whatever is scheduled with the current setting
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  if (scheduled.some((n) => n.identifier === DAILY_REMINDER_ID)) {
+    await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_ID);
+  }
+
+  const time = parseReminderTime(settings.dailyReminderTime);
+  if (!settings.dailyReminderEnabled || !time) return;
+
+  await Notifications.scheduleNotificationAsync({
+    identifier: DAILY_REMINDER_ID,
+    content: {
+      title: "Daily check-in",
+      body: "Do you need to track anything for today?",
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
+      hour: time.hours,
+      minute: time.minutes,
+    },
+  });
 };

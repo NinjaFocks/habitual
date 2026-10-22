@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   KOFI_URL,
   FEEDBACK_URL,
 } from "../constants";
+import { parseReminderTime, requestNotificationPermissions } from "../utils/notifications";
 
 const openLink = (url: string, name: string) => {
   Linking.openURL(url).catch(() =>
@@ -36,6 +37,35 @@ export default function SettingsScreen() {
   const [newCatName, setNewCatName] = useState("");
   const [newCatColor, setNewCatColor] = useState(CATEGORY_COLORS[0]);
   const [newCatIcon, setNewCatIcon] = useState("folder-outline");
+  const [dailyTime, setDailyTime] = useState(settings.dailyReminderTime);
+
+  // Keep the box in step with the saved value (e.g. once saved settings have loaded)
+  useEffect(() => {
+    setDailyTime(settings.dailyReminderTime);
+  }, [settings.dailyReminderTime]);
+
+  const handleToggleDaily = async (enabled: boolean) => {
+    if (enabled && !(await requestNotificationPermissions())) {
+      Alert.alert(
+        "Notifications are off",
+        "Allow notifications for Habitual in your phone's settings to get a daily reminder."
+      );
+      return;
+    }
+    updateSettings({ dailyReminderEnabled: enabled });
+  };
+
+  const commitDailyTime = () => {
+    const time = parseReminderTime(dailyTime);
+    if (!time) {
+      Alert.alert("Check the time", "Use the 24-hour format HH:MM, for example 20:00.");
+      setDailyTime(settings.dailyReminderTime);
+      return;
+    }
+    const formatted = `${String(time.hours).padStart(2, "0")}:${String(time.minutes).padStart(2, "0")}`;
+    setDailyTime(formatted);
+    updateSettings({ dailyReminderTime: formatted });
+  };
 
   const handleAddCategory = () => {
     if (!newCatName.trim()) return;
@@ -114,9 +144,40 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Daily reminder */}
+        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>DAILY REMINDER</Text>
+        <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.row}>
+            <Text style={[styles.rowText, { color: theme.text }]}>Remind me each day</Text>
+            <Switch
+              value={settings.dailyReminderEnabled}
+              onValueChange={handleToggleDaily}
+              trackColor={{ true: "#6C63FF" }}
+            />
+          </View>
+          {settings.dailyReminderEnabled && (
+            <View style={[styles.row, { borderTopWidth: 1, borderTopColor: theme.border }]}>
+              <Text style={[styles.rowText, { color: theme.text }]}>Time</Text>
+              <TextInput
+                value={dailyTime}
+                onChangeText={setDailyTime}
+                onBlur={commitDailyTime}
+                placeholder="HH:MM"
+                placeholderTextColor={theme.textTertiary}
+                style={[styles.timeInput, { color: theme.text, borderColor: theme.border }]}
+                keyboardType="numbers-and-punctuation"
+                maxLength={5}
+              />
+            </View>
+          )}
+        </View>
+        <Text style={[styles.sectionNote, { color: theme.textSecondary }]}>
+          One notification a day asking if you need to track anything. Reminders on individual habits still work too.
+        </Text>
+
         {/* Default reminder time */}
         <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
-          DEFAULT REMINDER TIME
+          DEFAULT HABIT REMINDER TIME
         </Text>
         <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.row}>
@@ -344,6 +405,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   linkLabel: { flex: 1 },
+  sectionNote: { fontSize: 12, marginLeft: 4, marginTop: 2, marginBottom: 14 },
   timeInput: {
     borderWidth: 1,
     borderRadius: 8,

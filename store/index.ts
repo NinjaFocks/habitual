@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StoreState, Habit, HabitCategory, AppSettings } from "../types";
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from "../constants";
 import { format } from "date-fns";
-import { cancelHabitReminder, syncHabitReminder } from "../utils/notifications";
+import { cancelHabitReminder, syncDailyReminder, syncHabitReminder } from "../utils/notifications";
 
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
@@ -132,11 +132,20 @@ export const useStore = create<StoreState>()(
 
       updateSettings: (updates) => {
         set({ settings: { ...get().settings, ...updates } });
+        // The daily reminder follows its settings
+        if ("dailyReminderEnabled" in updates || "dailyReminderTime" in updates) {
+          syncDailyReminder(get().settings).catch(console.warn);
+        }
       },
     }),
     {
       name: "habitual-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      // Settings added after the data was first saved fall back to their defaults
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<StoreState>;
+        return { ...current, ...saved, settings: { ...current.settings, ...saved.settings } };
+      },
     }
   )
 );

@@ -36,7 +36,9 @@ export type AppSettings = {
   gridWeeks: number; // 4, 13, 26, or 52
   theme: "light" | "dark" | "system";
   weekStartsOn: 0 | 1; // 0=Sunday, 1=Monday
-  defaultReminderTime: string;
+  defaultReminderTime: string; // for new habit reminders
+  dailyReminderEnabled: boolean;
+  dailyReminderTime: string; // HH:MM
 };
 
 export type StoreState = {
