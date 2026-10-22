@@ -9,12 +9,25 @@ import {
   Alert,
   Modal,
   TextInput,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useStore } from "../store";
 import { useTheme } from "../hooks/useTheme";
-import { GRID_WEEK_OPTIONS, CATEGORY_COLORS, HABIT_ICONS } from "../constants";
+import {
+  GRID_WEEK_OPTIONS,
+  CATEGORY_COLORS,
+  HABIT_ICONS,
+  KOFI_URL,
+  FEEDBACK_URL,
+} from "../constants";
+
+const openLink = (url: string, name: string) => {
+  Linking.openURL(url).catch(() =>
+    Alert.alert(`Could not open ${name}`, `Visit ${url} in your browser instead.`)
+  );
+};
 
 export default function SettingsScreen() {
   const theme = useTheme();
@@ -195,6 +208,33 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Support */}
+        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>SUPPORT</Text>
+        <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Pressable
+            onPress={() => openLink(FEEDBACK_URL, "the feedback board")}
+            accessibilityRole="link"
+            style={styles.linkRow}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color="#6C63FF" />
+            <Text style={[styles.rowText, styles.linkLabel, { color: theme.text }]}>
+              Report a bug or request a feature
+            </Text>
+            <Ionicons name="open-outline" size={18} color={theme.textSecondary} />
+          </Pressable>
+          <Pressable
+            onPress={() => openLink(KOFI_URL, "Ko-fi")}
+            accessibilityRole="link"
+            style={[styles.linkRow, { borderTopWidth: 1, borderTopColor: theme.border }]}
+          >
+            <Ionicons name="heart" size={20} color="#FF6584" />
+            <Text style={[styles.rowText, styles.linkLabel, { color: theme.text }]}>
+              Support on Ko-fi
+            </Text>
+            <Ionicons name="open-outline" size={18} color={theme.textSecondary} />
+          </Pressable>
+        </View>
+
         {/* About */}
         <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>ABOUT</Text>
         <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -297,6 +337,13 @@ const styles = StyleSheet.create({
   },
   rowText: { fontSize: 15 },
   rowSubtext: { fontSize: 13 },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 16,
+  },
+  linkLabel: { flex: 1 },
   timeInput: {
     borderWidth: 1,
     borderRadius: 8,

@@ -71,3 +71,6 @@ export const GRID_WEEK_OPTIONS = [
   { label: "6 months", value: 26 },
   { label: "1 year", value: 52 },
 ];
+
+export const KOFI_URL = "https://ko-fi.com/ninjafocks";
+export const FEEDBACK_URL = "https://habitual.sleekplan.app";

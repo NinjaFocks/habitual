@@ -113,6 +113,7 @@ habitual/
 - **Change accent colour**: Search for `#6C63FF` and replace with your preferred colour
 - **Add more icons**: Add Ionicons names to `HABIT_ICONS` in `constants/index.ts`
 - **Change default grid weeks**: Edit `DEFAULT_SETTINGS.gridWeeks` in `constants/index.ts`
+- **Change the support links**: Edit `KOFI_URL` and `FEEDBACK_URL` in `constants/index.ts`
 
 ---
 
