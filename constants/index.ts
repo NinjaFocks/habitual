@@ -66,6 +66,7 @@ export const DEFAULT_SETTINGS = {
 };
 
 export const GRID_WEEK_OPTIONS = [
+  { label: "1 month", value: 4 },
   { label: "3 months", value: 13 },
   { label: "6 months", value: 26 },
   { label: "1 year", value: 52 },

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,13 +8,14 @@ import {
   ScrollView,
   TextInput,
   Switch,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useStore } from "../store";
 import { useTheme } from "../hooks/useTheme";
 import { HABIT_COLORS, HABIT_ICONS } from "../constants";
-import { HabitType } from "../types";
-import { scheduleHabitReminder } from "../utils/notifications";
+import { Habit, HabitType } from "../types";
+import { parseReminderTime, syncHabitReminder } from "../utils/notifications";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type Props = {
@@ -70,8 +71,18 @@ export const AddHabitModal: React.FC<Props> = ({
     );
   };
 
+  const toggleReminderDay = (day: number) => {
+    setReminderDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
   const handleSave = async () => {
     if (!name.trim() || saving) return;
+    if (reminderEnabled && !parseReminderTime(reminderTime)) {
+      Alert.alert("Check the reminder time", "Use the 24-hour format HH:MM, for example 09:00.");
+      return;
+    }
     setSaving(true);
 
     const habitData = {
@@ -90,42 +101,48 @@ export const AddHabitModal: React.FC<Props> = ({
       activeDays,
     };
 
-    if (editHabitId) {
-      updateHabit(editHabitId, habitData);
+    let habitId = editHabitId;
+    if (habitId) {
+      updateHabit(habitId, habitData);
     } else {
-      addHabit(habitData);
+      habitId = addHabit(habitData);
     }
 
-    if (reminderEnabled) {
-      const tempHabit = {
-        ...habitData,
-        id: editHabitId ?? "temp",
-        completions: [],
-        createdAt: new Date().toISOString(),
-        order: 0,
-      };
-      await scheduleHabitReminder(tempHabit);
+    // Bring the scheduled notifications in line with what was just saved
+    // (this also cancels them when the reminder has been switched off)
+    const saved = useStore.getState().habits.find((h) => h.id === habitId);
+    if (saved) {
+      try {
+        await syncHabitReminder(saved);
+      } catch (e) {
+        console.warn("Could not update reminder", e);
+      }
     }
 
     setSaving(false);
     onClose();
-    resetForm();
   };
 
-  const resetForm = () => {
-    setName("");
-    setDescription("");
-    setType("boolean");
-    setSelectedColor(HABIT_COLORS[0]);
-    setSelectedIcon(HABIT_ICONS[0]);
-    setCategoryId("");
-    setTargetValue("");
-    setUnit("");
-    setReminderEnabled(false);
-    setReminderTime(settings.defaultReminderTime);
-    setReminderDays([1, 2, 3, 4, 5]);
-    setActiveDays([]);
+  // Fill the form from the habit being edited, or with blank defaults for a new one
+  const loadForm = (habit?: Habit | null) => {
+    setName(habit?.name ?? "");
+    setDescription(habit?.description ?? "");
+    setType(habit?.type ?? "boolean");
+    setSelectedColor(habit?.color ?? HABIT_COLORS[0]);
+    setSelectedIcon(habit?.icon ?? HABIT_ICONS[0]);
+    setCategoryId(habit?.categoryId ?? "");
+    setTargetValue(habit?.targetValue?.toString() ?? "");
+    setUnit(habit?.unit ?? "");
+    setReminderEnabled(habit?.reminderEnabled ?? false);
+    setReminderTime(habit?.reminderTime ?? settings.defaultReminderTime);
+    setReminderDays(habit?.reminderDays ?? [1, 2, 3, 4, 5]);
+    setActiveDays(habit?.activeDays ?? []);
   };
+
+  // Reload each time the sheet opens, so Edit always shows the habit's current values
+  useEffect(() => {
+    if (visible) loadForm(editHabit);
+  }, [visible, editHabitId]);
 
   return (
     <Modal
@@ -137,7 +154,7 @@ export const AddHabitModal: React.FC<Props> = ({
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         {/* Modal Header */}
         <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-          <Pressable onPress={() => { onClose(); resetForm(); }}>
+          <Pressable onPress={onClose}>
             <Text style={[styles.cancelText, { color: theme.textSecondary }]}>Cancel</Text>
           </Pressable>
           <Text style={[styles.modalTitle, { color: theme.text }]}>
@@ -391,34 +408,34 @@ export const AddHabitModal: React.FC<Props> = ({
               <>
                 <View style={[styles.divider, { backgroundColor: theme.border }]} />
                 <View style={styles.reminderDays}>
-              {orderedDays.map(({ label, index }) => (
-                <Pressable
-                  key={index}
-                  onPress={() => toggleActiveDay(index)}
-                  style={[
-                    styles.dayDot,
-                    {
-                      backgroundColor: activeDays.includes(index)
-                        ? "#6C63FF"
-                        : theme.surfaceSecondary,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.dayText,
-                      {
-                        color: activeDays.includes(index)
-                          ? "#FFF"
-                          : theme.textSecondary,
-                      },
-                    ]}
-                  >
-                    {label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+                  {orderedDays.map(({ label, index }) => (
+                    <Pressable
+                      key={index}
+                      onPress={() => toggleReminderDay(index)}
+                      style={[
+                        styles.dayDot,
+                        {
+                          backgroundColor: reminderDays.includes(index)
+                            ? "#6C63FF"
+                            : theme.surfaceSecondary,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dayText,
+                          {
+                            color: reminderDays.includes(index)
+                              ? "#FFF"
+                              : theme.textSecondary,
+                          },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
                 <View style={[styles.divider, { backgroundColor: theme.border }]} />
                 <View style={styles.timeRow}>
                   <Text style={[styles.reminderLabel, { color: theme.text }]}>Time</Text>

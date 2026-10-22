@@ -5,7 +5,7 @@ A free, open-source habit tracker with a beautiful contribution-style grid. No a
 ## Features
 
 - **3 habit types**: Yes/No (boolean), Count (e.g. glasses of water), Timer (e.g. reading minutes)
-- **Visual history grid**: Configurable 3, 6, or 12 month grid of coloured squares
+- **Visual history grid**: Configurable 1, 3, 6, or 12 month grid of coloured squares
 - **Streaks & Stats**: Current streak, longest streak, 30-day completion rate
 - **Categories**: Group habits by category with custom colours
 - **Reminders**: Per-habit notifications with custom days and time

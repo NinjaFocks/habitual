@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StoreState, Habit, HabitCategory, AppSettings } from "../types";
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from "../constants";
 import { format } from "date-fns";
+import { cancelHabitReminder, syncHabitReminder } from "../utils/notifications";
 
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
@@ -24,6 +25,7 @@ export const useStore = create<StoreState>()(
           order: habits.length,
         };
         set({ habits: [...habits, newHabit] });
+        return newHabit.id;
       },
 
       updateHabit: (id, updates) => {
@@ -36,6 +38,7 @@ export const useStore = create<StoreState>()(
 
       deleteHabit: (id) => {
         set({ habits: get().habits.filter((h) => h.id !== id) });
+        cancelHabitReminder(id).catch(console.warn);
       },
 
       archiveHabit: (id) => {
@@ -44,6 +47,9 @@ export const useStore = create<StoreState>()(
             h.id === id ? { ...h, archived: !h.archived } : h
           ),
         });
+        // Archiving silences a habit's reminders; restoring it brings them back
+        const habit = get().habits.find((h) => h.id === id);
+        if (habit) syncHabitReminder(habit).catch(console.warn);
       },
 
       reorderHabits: (ids) => {

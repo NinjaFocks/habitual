@@ -4,6 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useTheme } from "../hooks/useTheme";
+import { useStore } from "../store";
+import { rescheduleAllReminders } from "../utils/notifications";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 SplashScreen.preventAutoHideAsync();
@@ -13,6 +15,15 @@ export default function RootLayout() {
 
   useEffect(() => {
     SplashScreen.hideAsync();
+  }, []);
+
+  useEffect(() => {
+    // Once the saved habits have loaded, make sure scheduled reminders match them
+    const syncReminders = () => {
+      rescheduleAllReminders(useStore.getState().habits).catch(console.warn);
+    };
+    if (useStore.persist.hasHydrated()) syncReminders();
+    return useStore.persist.onFinishHydration(syncReminders);
   }, []);
 
   return (

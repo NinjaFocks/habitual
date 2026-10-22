@@ -36,6 +36,12 @@ export default function HabitDetailScreen() {
   const [countInput, setCountInput] = useState("");
 
   const habit = habits.find((h) => h.id === id);
+  const todayStr = today();
+  // Hooks have to run on every render, so these sit above the "not found" return
+  const initialSeconds =
+    habit?.completions.find((c) => c.date === todayStr)?.value ?? 0;
+  const [timerMinutes, setTimerMinutes] = useState(Math.floor(initialSeconds / 60).toString());
+  const [timerSeconds, setTimerSeconds] = useState((initialSeconds % 60).toString());
 
   if (!habit) {
     return (
@@ -45,16 +51,12 @@ export default function HabitDetailScreen() {
     );
   }
 
-  const todayStr = today();
   const isCompleted = isCompletedOnDate(habit, todayStr);
   const currentStreak = getCurrentStreak(habit);
   const longestStreak = getLongestStreak(habit);
   const completionRate = getCompletionRate(habit, 30);
   const totalCompletions = getTotalCompletions(habit);
   const todayCompletion = habit.completions.find((c) => c.date === todayStr);
-  const initialSeconds = todayCompletion?.value ?? 0;
-  const [timerMinutes, setTimerMinutes] = useState(Math.floor(initialSeconds / 60).toString());
-  const [timerSeconds, setTimerSeconds] = useState((initialSeconds % 60).toString());
 
   const handleToggle = async () => {
     if (Platform.OS !== "web") {

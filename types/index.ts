@@ -33,7 +33,7 @@ export type Habit = {
 };
 
 export type AppSettings = {
-  gridWeeks: number; // 13, 26, or 52
+  gridWeeks: number; // 4, 13, 26, or 52
   theme: "light" | "dark" | "system";
   weekStartsOn: 0 | 1; // 0=Sunday, 1=Monday
   defaultReminderTime: string;
@@ -45,7 +45,7 @@ export type StoreState = {
   settings: AppSettings;
 
   // Habit actions
-  addHabit: (habit: Omit<Habit, "id" | "createdAt" | "completions" | "order">) => void;
+  addHabit: (habit: Omit<Habit, "id" | "createdAt" | "completions" | "order">) => string; // returns the new habit's id
   updateHabit: (id: string, updates: Partial<Habit>) => void;
   deleteHabit: (id: string) => void;
   archiveHabit: (id: string) => void;
